@@ -1,0 +1,116 @@
+---
+title: "Examples to use TSC in Fixed Effects Models"
+author: "Moritz Berger"
+date: "`r Sys.Date()`"
+output: pdf_document
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, message=FALSE, echo=FALSE}
+library(knitr)
+opts_knit$set(root.dir=normalizePath('../'))
+```
+
+\section{CTB/McGraw-Hill}
+
+The data set contains results of an achievement test that measures different objectives and subskills of subjects in mathematics and science. The students had to respond to 56 multiple-choice items (31 mathematics, 25 science). For a description of the original data, see \cite{CTB}. 
+
+1. Load data 
+```{r, message=FALSE}
+library("structree")
+data(CTB, package="structree")
+```
+
+2. Overview of the data
+```{r}
+dim(CTB)
+str(CTB)
+nlevels(CTB$school)
+table(CTB$school)
+```
+There are 1500 grade 8 students from 35 schools. The response variable score is the overall test score, defined as the number of correctly solved items. Several variables characterise the schools and the students. For the analysis we use the covariate gender (male: 0, female: 1). 
+
+3. Estimation of the model
+```{r,tidy=TRUE,tidy.opts=list(width.cutoff=60)}
+mod_CTB <- structree(score~tr(1|school)+gender, data=CTB, family=gaussian,
+                     stop_criterion="pvalue", splits_max=34, alpha=0.05, trace=FALSE)
+
+# print 
+mod_CTB
+```
+For school-specific intercepts one has to enter \texttt{tr(1|school)} into the formula. 
+
+4. Number of Splits 
+```{r}
+mod_CTB$opts
+```
+The algorithm performs five splits, that is, forms six clusters regarding the intercept. 
+
+5. Paths of Coefficients 
+```{r,fig.height=4,fig.width=4,fig.align='center'}
+plot(mod_CTB, paths=TRUE)
+```
+
+6. Estimated Clusters 
+```{r,fig.height=4,fig.width=5,fig.align='center'}
+plot(mod_CTB, result=TRUE, cex.txt=0.7, cex.main=1.2)
+```
+
+7. Estimated Coefficients 
+```{r}
+coef(mod_CTB)
+```
+
+\section{National Survey in Guatemala}
+
+The data set contains observations of children that were born in the 5-year-period before the National Survey of Maternal and Child Health in Guatemala in 1987. The data was also analysed by \cite{GUA}. 
+
+1. Load data
+```{r, message=FALSE}
+library("structree")
+data(guPrenat, package="structree")
+```
+
+2. Overview of the data
+```{r}
+dim(guPrenat)
+str(guPrenat)
+nlevels(guPrenat$cluster)
+table(guPrenat$cluster)
+```
+There are 1211 children living in 45 communities. The response variable prenat is the indicator for modern prenatal care (prenat=1), for example by doctors or nurses, instead of traditional prenatal care (prenat=0). Several variables characterise the children's mothers and their families. 
+
+3. Estimation of the model
+```{r,tidy=TRUE,tidy.opts=list(width.cutoff=80)}
+mod_gua <- structree(prenat~tr(1|cluster)+indig+momEd+husEd+husEmpl+TV+motherAge+toilet,data=guPrenat,family=binomial(link="logit"),stop_criterion="pvalue",splits_max=10,alpha=0.05,trace=FALSE)
+
+# print 
+mod_gua
+```
+For community-specific intercepts one has to enter \texttt{tr(1|cluster)} into the formula. 
+
+4. Number of Splits 
+```{r}
+mod_gua$opts
+```
+The algorithm performs two splits, that is, forms two clusters regarding the intercept. 
+
+5. Estimated Clusters 
+```{r,fig.height=4,fig.width=6,fig.align='center'}
+plot(mod_gua, result=TRUE, cex.txt=0.7, cex.main=1.2)
+```
+
+6. Estimated Coefficients 
+```{r}
+coef(mod_gua)
+```
+
+\begin{thebibliography}{xxxxxxx}
+\bibitem{CTB}De Boeck, P. and M. Wilson (2004). {\it Explanatory item response models: A generalized linear and nonlinear approach}. 
+Springer Verlag. 
+\bibitem{GUA}Rodriguez, G. and N. Goldman (2001). Improved estimation procedures for multilevel models with binary response: A case-study. {\it Journal of the Royal Statistical Society. Series A (Statistics in Society) 164(2)}, 339-355.
+\end{thebibliography}
+

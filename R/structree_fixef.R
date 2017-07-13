@@ -7,8 +7,11 @@ function(y,
                             stop_criterion,
                             splits_max,
                             alpha,
-                            ridge_pen,
-                            tuning,
+                            grid_value,
+                            min_border,
+                            ridge,
+                            lambda,
+                            constant_covs,
                             trace){
   
   # global parameters 
@@ -18,6 +21,10 @@ function(y,
   which_slope  <- which(names(DM_kov) %in% slope)
   which_second <- which(names(DM_kov)==secondlevel)
   n_levels     <- nlevels(DM_kov[,secondlevel])
+  
+  if(family$family=="gaussian"){model <- "linear"}
+  if(family$family=="binomial"){model <- "logistic"}
+  if(family$family=="poisson"){model <- "poisson"}
   
   # modify DM_kov 
   DM_kov_mod <- DM_kov 
@@ -36,40 +43,79 @@ function(y,
   colnames(design_fm) <- paste0(n1,n2)
   
   # fixed-effects model
-  daten_ml <- as.data.frame(cbind(y,DM_kov[,c(which_slope,which_gamma),drop=FALSE],design_fm))  
-  if(is.null(ridge_pen)){
-    est_ml <- glm(y~.,data=daten_ml,family=family)
+  if(!constant_covs){
+    daten_ml <- as.data.frame(cbind(y,DM_kov[,c(which_slope,which_gamma),drop=FALSE],design_fm))  
+    if(!ridge){
+      est_ml <- glm(y~.,data=daten_ml,family=family)
+    } else{
+      h1 <- paste(names(daten_ml)[-1],collapse="+")
+      h2 <- formula(paste("~",h1,"-1",sep=""))
+      est_ml <- penalized(y,penalized=h2,lambda2=lambda,model=model,data=daten_ml,trace=FALSE)
+    }
   } else{
-    if(family$family=="gaussian"){model <- "linear"}
-    if(family$family=="binomial"){model <- "logistic"}
-    if(family$family=="poisson"){model <- "poisson"}
-    h1 <- paste(names(daten_ml)[-1],collapse="+")
-    h2 <- formula(paste("~",h1,"-1",sep=""))
-    est_ml <- penalized(y,penalized=h2,lambda2=ridge_pen,model=model,data=daten_ml,trace=FALSE)
+    data_mixed <- cbind(y=y,DM_kov)
+    form1 <- paste0(names(DM_kov)[which_gamma],collapse="+")
+    if(is.null(slope)){
+      form2 <- paste0("(1|",names(DM_kov)[which_second],")")
+    } else{
+      form2 <- NULL
+      for(i in 1:length(slope)){
+        temp  <- paste0("(",names(DM_kov[which_slope])[i],"|",names(DM_kov)[which_second],")")
+        form2 <- paste0(c(form2,temp),collapse="+")
+      }
+    }
+    form_mixed <- formula(paste0("y~",form1,"+",form2))
+    est_mixed  <- lmer(form_mixed,data=data_mixed)
   }
   
   # get order 
   order <- lapply(0:length(slope),function(j){
-    order(c(tail(coef(est_ml),ncol(design_fm))[(1:(n_levels-1))+(n_levels-1)*j],0))
+    if(!constant_covs){
+      return(order(c(tail(coefficients(est_ml),ncol(design_fm))[(1:(n_levels-1))+(n_levels-1)*j],0)))
+    } else{
+      return(order(ranef(est_mixed)[[secondlevel]][,j+1]))
+    }
   })
   names(order)[1] <- secondlevel
   names(order)[-1] <- slope
   
-  # compute only on a grid 
-  if(!is.null(tuning)){
-    splits_tuning <- lapply(0:length(slope),function(j){
-      vals     <- c(tail(coef(est_ml),ncol(design_fm))[(1:(n_levels-1))+(n_levels-1)*j],0)
-      vals_dif <- sort(vals)[-1]-sort(vals)[-n_levels]
-      as.numeric(which(vals_dif>=tuning[j+1]))
+  # restrict size of boarders 
+  if(!is.null(min_border) & is.null(grid_value)){
+    splits_grid <- lapply(0:length(slope), function(j){
+      min_border:(n_levels-min_border)
     })
-    names(splits_tuning)[1]  <- secondlevel
-    names(splits_tuning)[-1] <- slope
-    n_splits_tuning          <- sapply(1:length(order),function(j) length(splits_tuning[[j]]))
+    names(splits_grid)[1] <- secondlevel
+    names(splits_grid)[-1] <- slope
+    n_splits_grid <- sapply(1:length(order),function(j) length(splits_grid[[j]]))
+  }
+  
+  # compute only on a grid 
+  if(!is.null(grid_value)){
+    splits_grid <- lapply(0:length(slope),function(j){
+      if(!constant_covs){
+        vals     <- c(tail(coefficients(est_ml),ncol(design_fm))[(1:(n_levels-1))+(n_levels-1)*j],0)
+      } else{
+        vals     <- ranef(est_mixed)[[secondlevel]][,j]
+      }
+      vals_dif <- sort(vals)[-1]-sort(vals)[-n_levels]
+      as.numeric(which(vals_dif>=grid_value[j+1]))
+    })
+    names(splits_grid)[1]  <- secondlevel
+    names(splits_grid)[-1] <- slope
+    n_splits_grid          <- sapply(1:length(order),function(j) length(splits_grid[[j]]))
+    
+    if(!is.null(min_border)){
+      for(j in 1:length(order)){
+        splits_grid[[i]] <- splits_grid[[j]][splits_grid[[j]]%in%(min_border:(n_levels-min_border))]
+      }
+      n_splits_grid <- sapply(1:length(order),function(j) length(splits_grid[[j]]))
+    }
+    
     if(is.null(splits_max)){
-      splits_max               <- n_splits_tuning
+      splits_max    <- n_splits_grid
     } else{
-      if(splits_max>n_splits_tuning){
-        splits_max               <- n_splits_tuning
+      if(splits_max>n_splits_grid){
+        splits_max  <- n_splits_grid
       }
     }
   }
@@ -78,9 +124,9 @@ function(y,
   design_list <- lapply(1:length(order),function(i){                   
     sapply(2:n_levels,function(j) { ifelse(DM_kov_mod[,which_second] %in% order[[i]][j:n_levels],1,0)})
   })
-  if(!is.null(tuning)){
+  if((!is.null(min_border) | !is.null(grid_value))){
     for(i in 1:length(design_list)){
-      design_list[[i]] <- design_list[[i]][,splits_tuning[[i]]]
+      design_list[[i]] <- design_list[[i]][,splits_grid[[i]]]
     }
   }
   if(!is.null(slope)){
@@ -98,12 +144,12 @@ function(y,
     }
   }
   
-  if(is.null(tuning)){
+  if((is.null(min_border) & is.null(grid_value))){
     v <- unlist(lapply(1:length(order),function(j) order[[j]][-length(order[[j]])]))        
     w <- rep(paste("s",c(0,which_slope),sep=""),each=(n_levels-1))
   } else{
-    v <- unlist(lapply(1:length(order),function(j) order[[j]][splits_tuning[[j]]]))    
-    w <- rep(paste("s",c(0,which_slope),sep=""),(n_splits_tuning-1))
+    v <- unlist(lapply(1:length(order),function(j) order[[j]][splits_grid[[j]]]))    
+    w <- rep(paste("s",c(0,which_slope),sep=""),(n_splits_grid-1))
   }
   colnames(design_tree) <- paste(w,v,sep="")
   
@@ -112,10 +158,10 @@ function(y,
   # function to estimate tree 
   tree <- function(dat,splits_max,silent=FALSE){
     
-    # Initialisierung 
+    # initalize
     ps <- c()
     splits_evtl <- 1:n_s    
-    mod_potential <- list()  
+    mod_potential <- mod_potential_up <- list()  
     splits <- c()            
     count <- 1             
     
@@ -124,11 +170,11 @@ function(y,
     if(n_gamma>0){
       help0  <- paste("x",c(which_slope,which_gamma),sep="",collapse="+")          
       help1 <- formula(paste("y~",help0,sep=""))
-      mod0 <-  mod_potential[[count]] <- glm(help1,data=dat,family=family)       
+      mod0 <-  mod_potential[[count]] <-  mod_potential_up[[count]] <- glm(help1,data=dat,family=family)       
     } else{ 
       help00 <- paste0("x",which_slope,collapse="+")
       help10 <- formula(paste("y~",help00,sep=""))
-      mod0 <-  mod_potential[[count]] <- glm(help10,data=dat,family=family)       
+      mod0 <-  mod_potential[[count]] <-  mod_potential_up[[count]] <- glm(help10,data=dat,family=family)       
     }
     
     
@@ -152,49 +198,79 @@ function(y,
       splits[count] <- which.min(pvalues)                           
       
       help4 <- formula(paste("~.+",help2[splits[count]],sep=""))     
-      mod_potential[[count+1]] <- mod0 <- update(mod0,help4)          
+      mod_potential_up[[count+1]] <- mod0 <- update(mod0,help4) 
+      if(!is.null(lambda)){
+        h3 <- formula(paste0("~",help0))
+        h4 <- paste(names(coefficients(mod0))[-(1:(n_gamma+1))],collapse="+")
+        h5 <- formula(paste0("~",h4))
+        mod_potential[[count+1]] <- penalized(y,penalized=h5,unpenalized=h3,lambda2=lambda*10,model=model,data=dat,trace=FALSE)
+      } else{
+        mod_potential[[count+1]] <- mod_potential_up[[count+1]]
+      }
       splits_evtl <- splits_evtl[-which(splits_evtl==splits[count])]
       count <- count + 1   
       if(trace & !silent){
         cat(paste("Split",count-1,"\n",sep=" "))
       }
     }
-    return(list(splits,mod_potential,ps))
+    return(list(splits,mod_potential_up,mod_potential,ps))
   }
   
   # estimation 
   dat <- as.data.frame(cbind(y,design_tree,DM_kov_mod[,which_slope,drop=FALSE],DM_kov_mod[,which_gamma,drop=FALSE])) 
   
-  schaetzung    <- tree(dat,splits_max)
-  mod_potential <- schaetzung[[2]]
-  splits        <- schaetzung[[1]] 
-  ps            <- schaetzung[[3]]
-  ps            <- exp(ps)
+  estimation    <- tree(dat,splits_max)
+  mod_up        <- estimation[[2]]
+  mod_potential <- estimation[[3]]
+  splits        <- estimation[[1]] 
   
-  if(stop_criterion=="AIC"){
-    AIC <- sapply(1:length(mod_potential),function(j) AIC(mod_potential[[j]])) 
-    which_min <- which.min(AIC) 
-    tune_values <- AIC
-  }
-  if(stop_criterion=="BIC"){
-    logLiks <- sapply(1:length(mod_potential), function(j) logLik(mod_potential[[j]]))
-    dfs <- sapply(1:length(mod_potential), function(j) length(coef(mod_potential[[j]])))
-    BIC <- -2*logLiks+log(n)*dfs
-    which_min <- which.min(BIC) 
-    tune_values <- BIC
-  } 
-  if(stop_criterion=="pvalue"){
-    dev_ml <- 0 
-    for(i in 1:n){
-      dev_ml <- dev_ml + devs(y[i],fitted(est_ml)[i],family)
+  if(!constant_covs){
+    if(stop_criterion=="AIC"){
+      AIC <- sapply(1:length(mod_up),function(j) AIC(mod_up[[j]])) 
+      which_min <- which.min(AIC) 
+      tune_values <- AIC
     }
+    if(stop_criterion=="BIC"){
+      logLiks <- sapply(1:length(mod_up), function(j) logLik(mod_up[[j]]))
+      dfs <- sapply(1:length(mod_up), function(j) length(coefficients(mod_up[[j]])))
+      BIC <- -2*logLiks+log(n)*dfs
+      which_min <- which.min(BIC) 
+      tune_values <- BIC
+    } 
+    if(stop_criterion=="pvalue"){
+      dev_ml <- 0 
+      for(i in 1:n){
+        dev_ml <- dev_ml + devs(y[i],fitted(est_ml)[i],family)
+      }
+      ps  <- c() 
+      sig <- TRUE
+      sig_count <- 1 
+      while(sig){
+        lrstat <- deviance(mod_up[[sig_count]])-dev_ml
+        dfs    <- n_levels*(1+length(slope))-sig_count
+        p      <- ps[sig] <- pchisq(lrstat,dfs,lower.tail=FALSE)
+        proof  <- (p<alpha)
+        if(!proof){
+          sig <- FALSE
+          which_min <- sig_count
+        } else{ 
+          sig_count <- sig_count+1 
+        }
+      }
+      tune_values <- ps 
+    }
+  } else{
+    X <- as.matrix(dat[,-1])
+    ps  <- c() 
     sig <- TRUE
     sig_count <- 1 
     while(sig){
-      lrstat <- deviance(mod_potential[[sig_count]])-dev_ml
-      dfs    <- n_levels*(1+length(slope))-sig_count
-      p      <- pchisq(lrstat,dfs,lower.tail=FALSE)
-      proof  <- (p<alpha)
+      score       <- t(X)%*%(y-fitted(mod_up[[sig_count]]))
+      Fhochminus1 <- solve(t(X)%*%X)
+      scorestat   <- t(score)%*%Fhochminus1%*%score
+      dfs         <- n_levels-sig_count
+      p           <- ps[sig] <- pchisq(scorestat,dfs,lower.tail=FALSE)
+      proof       <- (p<alpha)
       if(!proof){
         sig <- FALSE
         which_min <- sig_count
@@ -202,17 +278,17 @@ function(y,
         sig_count <- sig_count+1 
       }
     }
-    tune_values <- ps 
+    tune_values <- ps
   }
   mod_opt <- mod_potential[[which_min]]
   
   #############################################################
   
   # save all splits 
-  if(is.null(tuning)){
+  if( (is.null(min_border) & is.null(grid_value)) ){
     help5 <- c(0,(n_levels-1)+n_levels*(0:length(slope)))           
   } else{
-    help5 <- c(0,cumsum(n_splits_tuning-1)) 
+    help5 <- c(0,cumsum(n_splits_grid-1)) 
   }
   
   splits_done <- lapply(1:length(order), function(j){
@@ -264,7 +340,7 @@ function(y,
       splits_aktuell <- splits_done[[j]][which(which_splits <=i)]                 
       
       help9 <- paste0(rep(paste0("s",c(0,which_slope)[j]),length(splits_aktuell)),splits_aktuell) 
-      alpha <- coef(mod_potential[[i+1]])[help9]                                    
+      alpha <- coefficients(mod_potential[[i+1]])[help9]                                    
       alpha_sort <- alpha[colnames(dat)]
       alpha_sort <- alpha_sort[!is.na(alpha_sort)]
       koeffizienten <- c(0,cumsum(alpha_sort))
@@ -279,7 +355,7 @@ function(y,
   
   # correct betas 
   cor_factors <- lapply(1:length(order), function(j){
-    sapply(1:length(mod_potential), function(k) {coef(mod_potential[[k]])[j]})
+    sapply(1:length(mod_potential), function(k) {coefficients(mod_potential[[k]])[j]})
   })
   for(j in 1:length(order)){
     for(i in 1:ncol(beta_hat[[j]])){
@@ -287,21 +363,28 @@ function(y,
     }
   }
   
-  # save splits until stopp 
-  splits <- splits[1:(which_min-1)]                
+   
+  if(which_min>1){
+    
+    # save splits until stopp
+    splits <- splits[1:(which_min-1)]                
   
-  splits_done <- lapply(1:length(order), function(j) {
-    which_splits <- which(splits %in% (help5[j]+1):help5[j+1]) 
-    return(v[splits][which_splits])
-  })
-  names(splits_done) <- names(beta_hat)
+    splits_done <- lapply(1:length(order), function(j) {
+      which_splits <- which(splits %in% (help5[j]+1):help5[j+1]) 
+      return(v[splits][which_splits])
+    })
+    names(splits_done) <- names(beta_hat)
   
 
-  # save optimal partition 
-  partitions_opt <- sapply(1:length(order), function(j) {
-    splits_aktuell  <- splits_done[[j]]
-    return(length(splits_aktuell))
-  })
+    # save optimal partition 
+    partitions_opt <- sapply(1:length(order), function(j) {
+      splits_aktuell  <- splits_done[[j]]
+      return(length(splits_aktuell))
+    })
+    
+  } else{
+    partitions_opt <- rep(0,length(order))
+  }  
   
   
   # save coefficients of groups 
@@ -330,8 +413,8 @@ function(y,
     
   if(n_gamma>0){
     for(i in 1:n_gamma){ 
-      which_coefs <- grep(paste0("x",which_gamma[i]),names(coef(mod_opt)))
-      coefs_all[[colnames(DM_kov)[which_gamma][i]]] <- coef(mod_opt)[which_coefs]
+      which_coefs <- grep(paste0("x",which_gamma[i]),names(coefficients(mod_opt)))
+      coefs_all[[colnames(DM_kov)[which_gamma][i]]] <- coefficients(mod_opt)[which_coefs]
     }
   }
     
@@ -359,9 +442,9 @@ function(y,
   to_return <- list("coefs_end"=coefs_end,
                     "partitions"=partitions,
                     "beta_hat"=beta_hat,
-                    "model"=mod_opt,
                     "which_opt"=which_min,
                     "opts"=partitions_opt,
+                    "model"=mod_opt,
                     "order"=order,
                     "tune_values"=tune_values,
                     "group_ID"=group_ID,

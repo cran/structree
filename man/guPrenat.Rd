@@ -48,4 +48,3 @@ models with binary response: a case-study", Journal of the Royal Statistical Soc
 Douglas Bates and Martin Maechler and Ben Bolker (2014). mlmRev: Examples from Multilevel Modelling Software Review. R
 package version 1.0-6. https://CRAN.R-project.org/package=mlmRev
 }
-

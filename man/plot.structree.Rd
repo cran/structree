@@ -57,9 +57,6 @@ plot(mod, paths=TRUE)
 
 
 }
-\author{
-Moritz Berger <moritz.berger@stat.uni-muenchen.de> \cr \url{http://www.statistik.lmu.de/~mberger/}
-}
 \references{
 Tutz, Gerhard and Berger, Moritz (2015): Tree-Structured Modelling of Categorical Predictors in Regression, 
 Cornell University Library, arXiv: 1504:04700.
@@ -70,4 +67,6 @@ Cornell University Library, arXiv: 1512.05169.
 \seealso{
 \code{\link[structree]{structree}}
 }
-
+\author{
+Moritz Berger <Moritz.Berger@imbie.uni-bonn.de> \cr \url{http://www.imbie.uni-bonn.de/personen/dr-moritz-berger/}
+}

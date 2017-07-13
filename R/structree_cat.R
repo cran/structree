@@ -178,7 +178,7 @@ function(y,
         sig_count <- sig_count+1 
       }
     }
-    tune_values <- ps
+    tune_values <- ps[1:which_min]
   }
   if(stop_criterion=="AIC"){
     AIC <- sapply(1:length(mod_potential),function(j) AIC(mod_potential[[j]])) 
@@ -303,21 +303,27 @@ function(y,
     }
   }
   
-  # save splits until stopp 
-  splits <- splits[1:(which_min-1)]                 
+  if(which_min>1){
   
-  splits_done <- lapply(1:n_fak, function(j) {
-    which_splits <- which(splits %in% (help5[j]+1):help5[j+1]) 
-    return(v[splits][which_splits])
-  })
-  names(splits_done) <- colnames(DM_kov)[which_kat]   
+    # save splits until stopp 
+    splits <- splits[1:(which_min-1)]                 
+  
+    splits_done <- lapply(1:n_fak, function(j) {
+      which_splits <- which(splits %in% (help5[j]+1):help5[j+1]) 
+      return(v[splits][which_splits])
+    })
+    names(splits_done) <- colnames(DM_kov)[which_kat]   
   
   
-  # save optimal partition 
-  partitions_opt <- sapply(1:n_fak, function(j) {
-    splits_aktuell  <- splits_done[[j]]
-    return(length(splits_aktuell))
-  })
+    # save optimal partition 
+    partitions_opt <- sapply(1:n_fak, function(j) {
+      splits_aktuell  <- splits_done[[j]]
+      return(length(splits_aktuell))
+    })
+    
+  } else{
+    partitions_opt <- rep(0,n_fak)
+  }
   
   
   # save coefficients of groups 
@@ -392,9 +398,9 @@ function(y,
   to_return <- list("coefs_end"=coefs_end,
                     "partitions"=partitions,
                     "beta_hat"=beta_hat,
-                    "model"=mod_opt,
                     "which_opt"=which_min,
                     "opts"=partitions_opt,
+                    "model"=mod_opt,
                     "order"=order,
                     "tune_values"=tune_values,
                     "group_ID"=group_ID,

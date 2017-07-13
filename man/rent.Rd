@@ -47,4 +47,3 @@ summary(X)
 \references{
 Fahrmeir, L. and Kuenstler, R. and Pigeot, I. and Tutz, G. (2004): Statistik: der Weg zur Datenanalyse. 5. Auflage, Springer, Berlin.
 }
-

@@ -13,9 +13,14 @@
 #' @param splits_max Maximal number of splits in the tree component. 
 #' @param fold Number of folds; only for stop criterion \code{"CV"}.
 #' @param alpha Significance level; only for stop criterion \code{"pvalue"}.
-#' @param ridge_pen An optional ridge penalty that is added to the model fit; only for repeated measurements. 
-#' @param tuning An optional tuning parameter; \code{tuning} is an scalar giving the minimal distance between 
-#' two adjacent observation units that are used as candidates for splitting; only for repeated measurements. 
+#' @param grid_value An optional parameter; \code{grid_value} is a scalar giving the minimal distance between 
+#' two adjacent observation units that are used as candidates for splitting; only for repeated measurements.
+#' @param min_border An optional parameter; \code{min_border} is a integer giving the minimal size of the outer 
+#' nodes of the tree; only for repeated measurements.
+#' @param ridge If true, an optional ridge penalty is added to the model fit; only for repeated measurements. 
+#' @param lambda An optional ridge penalty that is added to the model fit; only for repeated measurements.
+#' @param constant_covs Must be set to true, if constant covariates are available; only for repeated measurments 
+#' (currently only available for Gaussian response).  
 #' @param trace If true, information about the estimation progress is printed.
 #' @param plot If true, the smooth components of the model are plottet.  
 #' @param k Dimension of the B-Spline Basis that is used to fit smooth components. For details see \code{\link[mgcv]{s}}. 
@@ -44,8 +49,9 @@
 #' \item{coefs_end}{all coefficients of the estimated model}
 #' \item{partitions}{list of matrices containing the partitions of the predictors in the tree component including all iterations}
 #' \item{beta_hat}{list of matrices with the fitted coefficients in the tree component including all iterations}
-#' \item{model}{fitted model of class \code{"glm"} or \code{"gam"}} 
+#' \item{which_opt}{number of the optimal model (total number of splits-1)} 
 #' \item{opts}{number of splits per predictor in the tree component}
+#' \item{model}{final model, fitted during execution}
 #' \item{order}{list of ordered split-points of the predictors in the tree component}
 #' \item{tune_values}{value of the stopping criterion that determine the optimal model}
 #' \item{group_ID}{list of the group IDs for each observations}
@@ -53,7 +59,7 @@
 #' \item{y}{Response vector}
 #' \item{DM_kov}{Design matrix}
 #' 
-#' @author Moritz Berger <moritz.berger@stat.uni-muenchen.de> \cr \url{http://www.statistik.lmu.de/~mberger/}
+#' @author Moritz Berger <Moritz.Berger@imbie.uni-bonn.de> \cr \url{http://www.imbie.uni-bonn.de/personen/dr-moritz-berger/}
 #' 
 #' @seealso \code{\link[structree]{plot.structree}}
 #'
@@ -78,7 +84,8 @@
 #' @exportClass structree
 #' @export
 #' @import mgcv
-#' @importFrom penalized penalized 
+#' @import lme4
+#' @importFrom penalized penalized coefficients 
 #' @importFrom stats Gamma coef deviance fitted formula gaussian glm logLik pchisq predict update
 #' @importFrom utils tail
 
@@ -91,8 +98,11 @@ function(formula,
                        splits_max=NULL,
                        fold=5,
                        alpha=0.05,
-                       ridge_pen=NULL,
-                       tuning=NULL,
+                       grid_value=NULL,
+                       min_border=NULL,
+                       ridge=FALSE,
+                       lambda=NULL,
+                       constant_covs=FALSE, 
                        trace=TRUE,
                        plot=TRUE,
                        k=10,

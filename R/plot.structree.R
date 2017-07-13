@@ -23,7 +23,7 @@
 #' By default the function pictures the estimated trees against all splits. 
 #' If \code{select=NULL} the trees for all the predictors will be plotted. 
 #' 
-#' @author Moritz Berger <moritz.berger@stat.uni-muenchen.de> \cr \url{http://www.statistik.lmu.de/~mberger/}
+#' @author Moritz Berger <Moritz.Berger@imbie.uni-bonn.de> \cr \url{http://www.imbie.uni-bonn.de/personen/dr-moritz-berger/}
 #' 
 #' @seealso \code{\link[structree]{structree}}
 #'

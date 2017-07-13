@@ -44,4 +44,3 @@ table(x)
 \references{
 De Boeck, P. and M. Wilson (2004). Explanatory item response models: A generalized linear and nonlinear approach. Springer Verlag.
 }
-

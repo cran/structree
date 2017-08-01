@@ -8,7 +8,7 @@
 \usage{
 structree(formula, data, family = gaussian, stop_criterion = c("AIC", "BIC",
   "CV", "pvalue"), splits_max = NULL, fold = 5, alpha = 0.05,
-  grid_value = NULL, min_border = NULL, ridge = FALSE, lambda = NULL,
+  grid_value = NULL, min_border = NULL, ridge = FALSE,
   constant_covs = FALSE, trace = TRUE, plot = TRUE, k = 10, ...)
 
 \method{print}{structree}(x, ...)
@@ -39,18 +39,17 @@ two adjacent observation units that are used as candidates for splitting; only f
 \item{min_border}{An optional parameter; \code{min_border} is a integer giving the minimal size of the outer 
 nodes of the tree; only for repeated measurements.}
 
-\item{ridge}{If true, an optional ridge penalty is added to the model fit; only for repeated measurements.}
-
-\item{lambda}{An optional ridge penalty that is added to the model fit; only for repeated measurements.}
+\item{ridge}{If true, a small ridge penalty is added to obtain the order of measurement units; only for repeated measurements.}
 
 \item{constant_covs}{Must be set to true, if constant covariates are available; only for repeated measurments 
 (currently only available for Gaussian response).}
 
 \item{trace}{If true, information about the estimation progress is printed.}
 
-\item{plot}{If true, the smooth components of the model are plottet.}
+\item{plot}{If true, the smooth components of the model are plottet; only for categorical predictors.}
 
-\item{k}{Dimension of the B-Spline Basis that is used to fit smooth components. For details see \code{\link[mgcv]{s}}.}
+\item{k}{Dimension of the B-spline basis that is used to fit smooth components. For details see \code{\link[mgcv]{s}};
+only for categorical predictors.}
 
 \item{...}{Further arguments passed to or from other methods.}
 
@@ -65,7 +64,6 @@ An object of class \code{"structree"} is a list containing the following compone
 \item{beta_hat}{list of matrices with the fitted coefficients in the tree component including all iterations}
 \item{which_opt}{number of the optimal model (total number of splits-1)} 
 \item{opts}{number of splits per predictor in the tree component}
-\item{model}{final model, fitted during execution}
 \item{order}{list of ordered split-points of the predictors in the tree component}
 \item{tune_values}{value of the stopping criterion that determine the optimal model}
 \item{group_ID}{list of the group IDs for each observations}

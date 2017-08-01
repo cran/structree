@@ -10,9 +10,9 @@ function(y,
                             grid_value,
                             min_border,
                             ridge,
-                            lambda,
                             constant_covs,
-                            trace){
+                            trace,
+                            lambda){
   
   # global parameters 
   n            <- length(y)
@@ -50,7 +50,7 @@ function(y,
     } else{
       h1 <- paste(names(daten_ml)[-1],collapse="+")
       h2 <- formula(paste("~",h1,"-1",sep=""))
-      est_ml <- penalized(y,penalized=h2,lambda2=lambda,model=model,data=daten_ml,trace=FALSE)
+      est_ml <- penalized(y,penalized=h2,lambda2=0.01,model=model,data=daten_ml,trace=FALSE)
     }
   } else{
     data_mixed <- cbind(y=y,DM_kov)
@@ -203,7 +203,9 @@ function(y,
         h3 <- formula(paste0("~",help0))
         h4 <- paste(names(coefficients(mod0))[-(1:(n_gamma+1))],collapse="+")
         h5 <- formula(paste0("~",h4))
-        mod_potential[[count+1]] <- penalized(y,penalized=h5,unpenalized=h3,lambda2=lambda*10,model=model,data=dat,trace=FALSE)
+        mod_potential[[count+1]] <- penalized(y,penalized=h5,unpenalized=h3,
+                                              lambda2=lambda,model=model,
+                                              data=dat,trace=FALSE)
       } else{
         mod_potential[[count+1]] <- mod_potential_up[[count+1]]
       }
@@ -444,13 +446,13 @@ function(y,
                     "beta_hat"=beta_hat,
                     "which_opt"=which_min,
                     "opts"=partitions_opt,
-                    "model"=mod_opt,
                     "order"=order,
                     "tune_values"=tune_values,
                     "group_ID"=group_ID,
                     "coefs_group"=coefs_group,
                     "y"=y,
-                    "DM_kov"=DM_kov)
+                    "DM_kov"=DM_kov,
+                    "model"=mod_opt)
 
   # return
   return(to_return)

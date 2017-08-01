@@ -54,6 +54,8 @@ The algorithm performs five splits, that is, forms six clusters regarding the in
 plot(mod_CTB, paths=TRUE)
 ```
 
+\pagebreak
+
 6. Estimated Clusters 
 ```{r,fig.height=4,fig.width=5,fig.align='center'}
 plot(mod_CTB, result=TRUE, cex.txt=0.7, cex.main=1.2)
@@ -77,6 +79,11 @@ data(guPrenat, package="structree")
 2. Overview of the data
 ```{r}
 dim(guPrenat)
+```
+
+\pagebreak
+
+```{r}
 str(guPrenat)
 nlevels(guPrenat$cluster)
 table(guPrenat$cluster)
@@ -91,6 +98,8 @@ mod_gua <- structree(prenat~tr(1|cluster)+indig+momEd+husEd+husEmpl+TV+motherAge
 mod_gua
 ```
 For community-specific intercepts one has to enter \texttt{tr(1|cluster)} into the formula. 
+
+\pagebreak
 
 4. Number of Splits 
 ```{r}

@@ -11,7 +11,6 @@ function(formula,
                                grid_value=NULL,
                                min_border=NULL,
                                ridge=FALSE,
-                               lambda=NULL,
                                constant_covs=FALSE,
                                trace=TRUE,
                                plot=TRUE,
@@ -56,12 +55,17 @@ function(formula,
     if(stop_criterion == "CV"){
       stop("Cross-Validation not implemented for repeated measurements!")
     }
-    if((family$family=="Gamma" & (ridge | !is.null(lambda)))){
+    if((family$family=="Gamma" & !is.null(ridge))){
       stop("Ridge estimation is only implemented for families: gaussian, binomial and poisson!")
     }
+    lambda <- NULL 
+    if(nrow(DM_kov)<1000){
+      n_levels <- nlevels(DM_kov[,secondlevel])
+      lambda   <- setl(n_levels,family)
+    }
     output <- structree_fixef(y,DM_kov,secondlevel,slope,family,stop_criterion,splits_max,
-                              alpha,grid_value,min_border,ridge,lambda,constant_covs,trace)
-  
+                              alpha,grid_value,min_border,ridge,constant_covs,trace,lambda)
+    
     attr(output,"type")        <- "fixedEff"
     attr(output,"secondlevel") <- secondlevel
     attr(output,"slope")       <- slope

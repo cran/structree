@@ -17,13 +17,13 @@
 #' two adjacent observation units that are used as candidates for splitting; only for repeated measurements.
 #' @param min_border An optional parameter; \code{min_border} is a integer giving the minimal size of the outer 
 #' nodes of the tree; only for repeated measurements.
-#' @param ridge If true, an optional ridge penalty is added to the model fit; only for repeated measurements. 
-#' @param lambda An optional ridge penalty that is added to the model fit; only for repeated measurements.
+#' @param ridge If true, a small ridge penalty is added to obtain the order of measurement units; only for repeated measurements. 
 #' @param constant_covs Must be set to true, if constant covariates are available; only for repeated measurments 
 #' (currently only available for Gaussian response).  
 #' @param trace If true, information about the estimation progress is printed.
-#' @param plot If true, the smooth components of the model are plottet.  
-#' @param k Dimension of the B-Spline Basis that is used to fit smooth components. For details see \code{\link[mgcv]{s}}. 
+#' @param plot If true, the smooth components of the model are plottet; only for categorical predictors.  
+#' @param k Dimension of the B-spline basis that is used to fit smooth components. For details see \code{\link[mgcv]{s}};
+#' only for categorical predictors.  
 #' @param x,object Object of class \code{"structree"}.
 #' @param ... Further arguments passed to or from other methods. 
 #' 
@@ -51,7 +51,6 @@
 #' \item{beta_hat}{list of matrices with the fitted coefficients in the tree component including all iterations}
 #' \item{which_opt}{number of the optimal model (total number of splits-1)} 
 #' \item{opts}{number of splits per predictor in the tree component}
-#' \item{model}{final model, fitted during execution}
 #' \item{order}{list of ordered split-points of the predictors in the tree component}
 #' \item{tune_values}{value of the stopping criterion that determine the optimal model}
 #' \item{group_ID}{list of the group IDs for each observations}
@@ -101,7 +100,6 @@ function(formula,
                        grid_value=NULL,
                        min_border=NULL,
                        ridge=FALSE,
-                       lambda=NULL,
                        constant_covs=FALSE, 
                        trace=TRUE,
                        plot=TRUE,

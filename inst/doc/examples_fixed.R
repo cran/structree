@@ -37,6 +37,8 @@ data(guPrenat, package="structree")
 
 ## ------------------------------------------------------------------------
 dim(guPrenat)
+
+## ------------------------------------------------------------------------
 str(guPrenat)
 nlevels(guPrenat$cluster)
 table(guPrenat$cluster)

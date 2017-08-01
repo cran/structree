@@ -400,13 +400,13 @@ function(y,
                     "beta_hat"=beta_hat,
                     "which_opt"=which_min,
                     "opts"=partitions_opt,
-                    "model"=mod_opt,
                     "order"=order,
                     "tune_values"=tune_values,
                     "group_ID"=group_ID,
                     "coefs_group"=coefs_group,
                     "y"=y,
-                    "DM_kov"=DM_kov)
+                    "DM_kov"=DM_kov,
+                    "model"=mod_opt)
 
   # plot smooth estimate
   if(!is.null(which_smooth) & plot==TRUE){

@@ -6,8 +6,8 @@
 \alias{coef.structree}
 \title{Tree-Structured Clustering}
 \usage{
-structree(formula, data, family = gaussian, stop_criterion = c("AIC", "BIC",
-  "CV", "pvalue"), splits_max = NULL, fold = 5, alpha = 0.05,
+structree(formula, data, family = gaussian, stop_criterion = c("AIC",
+  "BIC", "CV", "pvalue"), splits_max = NULL, fold = 5, alpha = 0.05,
   grid_value = NULL, min_border = NULL, ridge = FALSE,
   constant_covs = FALSE, trace = TRUE, plot = TRUE, k = 10, ...)
 
@@ -92,7 +92,7 @@ All other predictors with a linear term are entered as usual by \code{x1+...+xp}
 data(rent)
 
 \dontrun{
-mod <- structree(nmqm~tr(bez)+tr(bj)+tr(rooms)+badkach,data=rent,
+mod <- structree(nmqm~tr(bez)+tr(bj)+tr(rooms)+badkach0,data=rent,
                  family=gaussian,stop_criterion="CV")
 
 print(mod)
@@ -101,11 +101,11 @@ coef(mod)
 
 }
 \references{
-Tutz, Gerhard and Berger, Moritz (2015): Tree-Structured Modelling of Categorical Predictors in Regression, 
-Cornell University Library, arXiv: 1504:04700.
+Tutz, Gerhard and Berger, Moritz (2018): Tree-structured modelling of categorical predictors in regression, 
+Advances in Data Analysis and Classification 12(3), 737-758.
 
-Berger, Moritz and Tutz, Gerhard (2015): Tree-Structured Clustering in Fixed Effects Models, 
-Cornell University Library, arXiv: 1512.05169.
+Berger, Moritz and Tutz, Gerhard (2018): Tree-structured clustering in fixed effects models, 
+Journal of Computational and Graphical Statistics 27(2), 380-392.
 }
 \seealso{
 \code{\link[structree]{plot.structree}}

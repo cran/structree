@@ -1,8 +1,8 @@
 Package: structree
 Type: Package
 Title: Tree-Structured Clustering
-Version: 1.1.6
-Date: 2019-09-27
+Version: 1.1.7
+Date: 2020-06-04
 Author: Moritz Berger
 Depends: mgcv, lme4, penalized
 Maintainer: Moritz Berger <Moritz.Berger@imbie.uni-bonn.de>
@@ -10,10 +10,10 @@ Description: Tree-structured modelling of categorical predictors (Tutz and Berge
     units (Berger and Tutz (2018), <doi:10.1080/10618600.2017.1371030>).
 License: GPL-3
 LazyLoad: yes
-RoxygenNote: 6.1.1
+RoxygenNote: 7.1.0
 Suggests: knitr, rmarkdown
 VignetteBuilder: knitr
 NeedsCompilation: no
-Packaged: 2019-09-27 09:57:27 UTC; ru94tig
+Packaged: 2020-06-04 12:50:58 UTC; berger
 Repository: CRAN
-Date/Publication: 2019-09-27 11:30:06 UTC
+Date/Publication: 2020-06-05 09:40:02 UTC

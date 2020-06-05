@@ -24,8 +24,10 @@
 #' @param plot If true, the smooth components of the model are plottet; only for categorical predictors.  
 #' @param k Dimension of the B-spline basis that is used to fit smooth components. For details see \code{\link[mgcv]{s}};
 #' only for categorical predictors.  
+#' @param weights An optional vector of prior weights to be used in the fitting process; see also \code{\link{glm}}.
+#' @param offset An a priori known component to be included in the linear predictor during fitting; see also \code{\link{glm}}.
 #' @param x,object Object of class \code{"structree"}.
-#' @param ... Further arguments passed to or from other methods. 
+#' @param ... Further arguments passed to or from other methods.
 #' 
 #' @details 
 #' A typical \link{formula} has the form \code{response ~ predictors}, where \code{response} is the name of the response variable 
@@ -80,7 +82,6 @@
 #' coef(mod)
 #' }
 #' 
-#' @exportClass structree
 #' @export
 #' @import mgcv
 #' @import lme4
@@ -104,6 +105,8 @@ function(formula,
                        trace=TRUE,
                        plot=TRUE,
                        k=10,
+                       weights=NULL,
+                       offset=NULL,
                        ...){
   UseMethod("structree")
 }

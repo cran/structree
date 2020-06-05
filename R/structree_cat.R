@@ -10,7 +10,9 @@ function(y,
                            alpha,
                            trace,
                            plot,
-                           k){
+                           k,
+                           weights,
+                           offset){
   
   
   # global parameters
@@ -22,6 +24,8 @@ function(y,
   }
   n_gamma      <- ncol(DM_kov)-n_fak                  
   n_levels     <- sapply(which_kat,function(j) length(levels(DM_kov[,j]))-1)
+  if(is.null(weights)){ weights <- rep(1,n)}
+  if(is.null(offset)) { offset  <- rep(0,n)}
   
   # check which_kat 
   is_factor <- which(sapply(which_kat,function(j) is.factor(DM_kov[,j]))!=rep(TRUE,n_fak))
@@ -49,12 +53,12 @@ function(y,
   if(sum(all_ordered)<n_fak){
     daten_ml <- data.frame(y=y,DM_kov_mod)   
     if(is.null(which_smooth)){
-      est_ml   <- glm(y~.,data=daten_ml,family=family)
+      est_ml   <- glm(y~.,data=daten_ml,family=family,weights=weights,offset=offset)
     } else{
       lp_smooth <- paste0("s(x",which_smooth,",bs='cr',k=",k,")",collapse="+")
       lp_linear <- paste0("x",(1:ncol(DM_kov_mod))[-c(which_smooth)],collapse="+")
       lp        <- formula(paste0("y~",lp_linear,"+",lp_smooth))
-      est_ml    <- gam(lp,data=daten_ml,family=family)
+      est_ml    <- gam(lp,data=daten_ml,family=family,weights=weights,offset=offset)
     }
   }
   
@@ -95,21 +99,23 @@ function(y,
   #########################################################################################
 
   # function to estimate tree 
-  tree <- function(dat,splits_max,silent=FALSE){
+  tree <- function(dat,splits_max,we,off,silent=FALSE){
     
     # initals 
     ps <- c()
     splits_evtl   <- 1:n_s     
     mod_potential <- list()  
     splits <- c()           
-    count <- 1             
+    count <- 1         
+    dat$we  <- we
+    dat$off <- off
     
     # null model 
     if(n_gamma>0){
       if(is.null(which_smooth)){
         help0  <- paste0("x",(1:ncol(DM_kov_mod))[-which_kat],collapse="+")          
         help1  <- formula(paste0("y~",help0))
-        mod0   <- mod_potential[[count]] <- glm(help1,data=dat,family=family)   
+        mod0   <- mod_potential[[count]] <- glm(help1,data=dat,family=family,weights=we,offset=off)   
       } else{
         if(n_gamma>length(which_smooth)){
           help0  <- paste0("x",(1:ncol(DM_kov_mod))[-c(which_kat,which_smooth)],"+",collapse="+") 
@@ -117,10 +123,10 @@ function(y,
           help0 <- NULL 
         }
         help1 <- formula(paste0("y~",help0,lp_smooth))
-        mod0  <- mod_potential[[count]] <- gam(help1,data=dat,family=family)
+        mod0  <- mod_potential[[count]] <- gam(help1,data=dat,family=family,weights=we,offset=off)
       }
     } else{ 
-      mod0 <- mod_potential[[count]] <- glm(y~1,data=dat,family=family)                                       
+      mod0 <- mod_potential[[count]] <- glm(y~1,data=dat,family=family,weights=we,offset=off)                                       
     }
     
     # sucessive estimtation 
@@ -157,7 +163,7 @@ function(y,
   
   # estimation 
   dat           <- as.data.frame(cbind(y,design_tree,DM_kov_mod[,-which_kat,drop=FALSE])) 
-  schaetzung    <- tree(dat,splits_max)
+  schaetzung    <- tree(dat,splits_max,weights,offset)
   mod_potential <- schaetzung[[2]]
   splits        <- schaetzung[[1]] 
   ps            <- schaetzung[[3]]
@@ -171,7 +177,7 @@ function(y,
       p <- ps[sig_count+1]
       alpha_adj <- alpha/(n_s-sig_count)  # adjust p-values
       proof <- (p < alpha_adj)
-      if(!proof){
+      if(!proof | splits_max==(sig_count+1)){
         sig <- FALSE
         which_min <- sig_count
       } else{ 
@@ -201,10 +207,14 @@ function(y,
     
     for(k in 1:fold){
       dat_temp <- as.data.frame(cbind(y=y[l_index[[k]]],design_tree[l_index[[k]],],DM_kov_mod[l_index[[k]],-which_kat, drop=FALSE])) 
+      weights_temp <- weights[l_index[[k]]]
+      offset_temp  <- offset[l_index[[k]]]
       
-      schaetzung_temp    <- tree(dat_temp,splits_max,silent=TRUE)
+      schaetzung_temp    <- tree(dat_temp,splits_max,weights_temp,offset_temp,silent=TRUE)
       mod_potential_temp <- schaetzung_temp[[2]]
       new_data           <- as.data.frame(cbind(y=y[t_index[[k]]],design_tree[t_index[[k]],],DM_kov_mod[t_index[[k]],-which_kat, drop=FALSE]))
+      new_data$we        <- weights[t_index[[k]]]
+      new_data$off       <- offset[t_index[[k]]]
       mu_hat             <- sapply(1:length(mod_potential_temp), function(j) predict(mod_potential_temp[[j]],newdata=new_data,type="response"))
       dif <- matrix(NA,nrow=length(t_index[[k]]),ncol=length(mod_potential_temp))
       for(i in 1:length(t_index[[k]])){

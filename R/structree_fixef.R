@@ -12,6 +12,8 @@ function(y,
                             ridge,
                             constant_covs,
                             trace,
+                            weights,
+                            offset,
                             lambda){
   
   # global parameters 
@@ -21,6 +23,8 @@ function(y,
   which_slope  <- which(names(DM_kov) %in% slope)
   which_second <- which(names(DM_kov)==secondlevel)
   n_levels     <- nlevels(DM_kov[,secondlevel])
+  if(is.null(weights)){ weights <- rep(1,n)}
+  if(is.null(offset)) { offset  <- rep(0,n)}
   
   if(family$family=="gaussian"){model <- "linear"}
   if(family$family=="binomial"){model <- "logistic"}
@@ -46,7 +50,7 @@ function(y,
   if(!constant_covs){
     daten_ml <- as.data.frame(cbind(y,DM_kov[,c(which_slope,which_gamma),drop=FALSE],design_fm))  
     if(!ridge){
-      est_ml <- glm(y~.,data=daten_ml,family=family)
+      est_ml <- glm(y~.,data=daten_ml,family=family,weights=weights,offset=offset)
     } else{
       h1 <- paste(names(daten_ml)[-1],collapse="+")
       h2 <- formula(paste("~",h1,"-1",sep=""))
@@ -65,7 +69,7 @@ function(y,
       }
     }
     form_mixed <- formula(paste0("y~",form1,"+",form2))
-    est_mixed  <- lmer(form_mixed,data=data_mixed)
+    est_mixed  <- lmer(form_mixed,data=data_mixed,weights=weights,offset=offset)
   }
   
   # get order 
@@ -156,7 +160,7 @@ function(y,
   ####################################################################
   
   # function to estimate tree 
-  tree <- function(dat,splits_max,silent=FALSE){
+  tree <- function(dat,splits_max,we,off,silent=FALSE){
     
     # initalize
     ps <- c()
@@ -170,11 +174,11 @@ function(y,
     if(n_gamma>0){
       help0  <- paste("x",c(which_slope,which_gamma),sep="",collapse="+")          
       help1 <- formula(paste("y~",help0,sep=""))
-      mod0 <-  mod_potential[[count]] <-  mod_potential_up[[count]] <- glm(help1,data=dat,family=family)       
+      mod0 <-  mod_potential[[count]] <-  mod_potential_up[[count]] <- glm(help1,data=dat,family=family,weights=we,offset=off)       
     } else{ 
       help00 <- paste0("x",which_slope,collapse="+")
       help10 <- formula(paste("y~",help00,sep=""))
-      mod0 <-  mod_potential[[count]] <-  mod_potential_up[[count]] <- glm(help10,data=dat,family=family)       
+      mod0 <-  mod_potential[[count]] <-  mod_potential_up[[count]] <- glm(help10,data=dat,family=family,weights=we,offset=off)       
     }
     
     
@@ -221,7 +225,7 @@ function(y,
   # estimation 
   dat <- as.data.frame(cbind(y,design_tree,DM_kov_mod[,which_slope,drop=FALSE],DM_kov_mod[,which_gamma,drop=FALSE])) 
   
-  estimation    <- tree(dat,splits_max)
+  estimation    <- tree(dat,splits_max,weights,offset)
   mod_up        <- estimation[[2]]
   mod_potential <- estimation[[3]]
   splits        <- estimation[[1]] 
@@ -252,7 +256,7 @@ function(y,
         dfs    <- n_levels*(1+length(slope))-sig_count
         p      <- ps[sig] <- pchisq(lrstat,dfs,lower.tail=FALSE)
         proof  <- (p<alpha)
-        if(!proof){
+        if(!proof | splits_max==(sig_count+1)){
           sig <- FALSE
           which_min <- sig_count
         } else{ 

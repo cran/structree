@@ -9,7 +9,8 @@
 structree(formula, data, family = gaussian, stop_criterion = c("AIC",
   "BIC", "CV", "pvalue"), splits_max = NULL, fold = 5, alpha = 0.05,
   grid_value = NULL, min_border = NULL, ridge = FALSE,
-  constant_covs = FALSE, trace = TRUE, plot = TRUE, k = 10, ...)
+  constant_covs = FALSE, trace = TRUE, plot = TRUE, k = 10,
+  weights = NULL, offset = NULL, ...)
 
 \method{print}{structree}(x, ...)
 
@@ -50,6 +51,10 @@ nodes of the tree; only for repeated measurements.}
 
 \item{k}{Dimension of the B-spline basis that is used to fit smooth components. For details see \code{\link[mgcv]{s}};
 only for categorical predictors.}
+
+\item{weights}{An optional vector of prior weights to be used in the fitting process; see also \code{\link{glm}}.}
+
+\item{offset}{An a priori known component to be included in the linear predictor during fitting; see also \code{\link{glm}}.}
 
 \item{...}{Further arguments passed to or from other methods.}
 

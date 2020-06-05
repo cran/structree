@@ -15,6 +15,8 @@ function(formula,
                                trace=TRUE,
                                plot=TRUE,
                                k=10,
+                               weights=NULL,
+                               offset=NULL,
                                ...){
   
   # check input 
@@ -64,13 +66,13 @@ function(formula,
       lambda   <- setl(n_levels,family)
     }
     output <- structree_fixef(y,DM_kov,secondlevel,slope,family,stop_criterion,splits_max,
-                              alpha,grid_value,min_border,ridge,constant_covs,trace,lambda)
+                              alpha,grid_value,min_border,ridge,constant_covs,trace,weights,offset,lambda)
     
     attr(output,"type")        <- "fixedEff"
     attr(output,"secondlevel") <- secondlevel
     attr(output,"slope")       <- slope
   } else{
-    output <- structree_cat(y,DM_kov,which_kat,which_smooth,family,stop_criterion,splits_max,fold,alpha,trace,plot,k)
+    output <- structree_cat(y,DM_kov,which_kat,which_smooth,family,stop_criterion,splits_max,fold,alpha,trace,plot,k,weights,offset)
 
     attr(output,"type")         <- "catPred"  
     attr(output,"which_kat")    <- which_kat
